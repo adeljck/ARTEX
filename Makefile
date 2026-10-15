@@ -30,7 +30,7 @@ TARGETARCH ?= $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build build-web build-backend docker dev test install update release reset-password clean
+.PHONY: help build build-web build-backend docker offline-package dev test install update release reset-password clean
 
 # 构建内嵌前端的单二进制（当前平台）
 build: build-web
@@ -56,6 +56,14 @@ docker: build-web
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(TARGETARCH) $(GO) build -tags embedui -trimpath \
 	  -ldflags "$(LDFLAGS)" -o dist/$(TARGETARCH)/artex ./cmd/artex
 	docker build -t $(IMAGE) .
+
+# 构建离线安装包（调用 build-offline.sh，内含镜像构建+保存+打包+清理）。
+# ARGS 可传镜像名/tag/包名（与 build-offline.sh 参数一致）：
+#   make offline-package                                # 默认 artex:0.1.0
+#   make offline-package ARGS="artex 0.2.0"
+#   make offline-package ARGS="myrepo/artex v0.1.0 my-pkg"
+offline-package:
+	./build-offline.sh $(ARGS)
 
 # 开发模式（后端 + 代理 + 前端 dev，见 dev.sh）
 dev:
@@ -92,6 +100,7 @@ help:
 	@echo "  make build-web        只导出前端静态产物到 server/webui/dist"
 	@echo "  make build-backend    只编译后端（不内嵌前端，dev 用）"
 	@echo "  make docker           构建 Docker 镜像（自动探测架构，IMAGE/TARGETARCH 可覆盖）"
+	@echo "  make offline-package  构建离线安装包（ARGS 可传镜像名/tag/包名）"
 	@echo "  make dev              开发模式（dev.sh）"
 	@echo "  make test             运行全部测试"
 	@echo "  make install          首次安装（install.sh）"
